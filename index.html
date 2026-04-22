@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barreta Music Compass</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+    <style>
+        body { background: #0f172a; color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 15px; text-align: center; width: 100%; max-width: 400px; border: 1px solid #334155; }
+        .note-display { fontSize: 48px; fontWeight: bold; color: #60a5fa; margin: 20px 0; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .footer { margin-top: 20px; font-size: 12px; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        function App() {
+            const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const [index, setIndex] = useState(0);
+
+            return (
+                <div className="card">
+                    <h2>Music Compass</h2>
+                    <p>Tónica seleccionada:</p>
+                    <div className="note-display">{notes[index]}</div>
+                    <div style={{display: 'flex', justifyContent: 'center', gap: '10px'}}>
+                        <button onClick={() => setIndex((index - 1 + 12) % 12)}>Anterior</button>
+                        <button onClick={() => setIndex((index + 1) % 12)}>Siguiente</button>
+                    </div>
+                    <div className="footer">Barreta Producciones © 2026</div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+

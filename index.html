@@ -1,47 +1,110 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barreta Music Compass</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
-    <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .card { background: #1e293b; padding: 20px; border-radius: 15px; text-align: center; width: 100%; max-width: 400px; border: 1px solid #334155; }
-        .note-display { fontSize: 48px; fontWeight: bold; color: #60a5fa; margin: 20px 0; }
-        button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .footer { margin-top: 20px; font-size: 12px; color: #64748b; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 Barreta Music Compass</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080d1a; color: #e2e8f0; font-family: system-ui, sans-serif; padding-bottom: 40px; }
+  .container { maxWidth: 800px; margin: 0 auto; padding: 15px; }
+  select, button { font-family: inherit; }
+  .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+  .btn-sm { background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+  .active-btn { background: #3b82f6 !important; color: white !important; border-color: #60a5fa !important; }
+</style>
 </head>
 <body>
-    <div id="root"></div>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
 
-    <script type="text/babel">
-        const { useState } = React;
+const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const CIRCLE = ['C','G','D','A','E','B','F#','C#','G#','D#','A#','F'];
+const RELATIVE = {'C':'Am','G':'Em','D':'Bm','A':'F#m','E':'C#m','B':'G#m','F#':'D#m','C#':'A#m','G#':'Fm','D#':'Cm','A#':'Gm','F':'Dm'};
+const MODES = {'Mayor':[0,2,4,5,7,9,11], 'Dórico':[0,2,3,5,7,9,10], 'Frigio':[0,1,3,5,7,8,10], 'Mixolidio':[0,2,4,5,7,9,10], 'Menor':[0,2,3,5,7,8,10]};
+const INSTRUMENTS = {
+  guitar: { name:'Guitarra', strings:['E','A','D','G','B','E'] },
+  bass: { name:'Bajo', strings:['E','A','D','G'] }
+};
 
-        function App() {
-            const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-            const [index, setIndex] = useState(0);
+function App() {
+  const [inst, setInst] = useState('guitar');
+  const [root, setRoot] = useState('C');
+  const [mode, setMode] = useState('Mayor');
+  const [tab, setTab] = useState('fretboard');
 
-            return (
-                <div className="card">
-                    <h2>Music Compass</h2>
-                    <p>Tónica seleccionada:</p>
-                    <div className="note-display">{notes[index]}</div>
-                    <div style={{display: 'flex', justifyContent: 'center', gap: '10px'}}>
-                        <button onClick={() => setIndex((index - 1 + 12) % 12)}>Anterior</button>
-                        <button onClick={() => setIndex((index + 1) % 12)}>Siguiente</button>
+  const sn = MODES[mode].map(i => NOTES[(NOTES.indexOf(root)+i)%12]);
+
+  return (
+    <div className="container">
+      <h1 style={{textAlign:'center', color:'#60a5fa', margin:'20px 0', fontSize:'24px'}}>Music Tool</h1>
+      
+      {/* Selector de Instrumento */}
+      <div style={{display:'flex', gap:'8px', justifyContent:'center', marginBottom:'15px'}}>
+        {Object.keys(INSTRUMENTS).map(k => (
+          <button key={k} onClick={()=>setInst(k)} className={`btn-sm ${inst===k?'active-btn':''}`}>{INSTRUMENTS[k].name}</button>
+        ))}
+      </div>
+
+      {/* Control de Tónica */}
+      <div className="card" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <button onClick={() => setRoot(CIRCLE[(CIRCLE.indexOf(root)+11)%12])} className="btn-sm">◀</button>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:'10px', color:'#475569'}}>TÓNICA</div>
+          <div style={{fontSize:'24px', fontWeight:'bold'}}>{root}</div>
+          <div style={{fontSize:'12px', color:'#a78bfa'}}>Relativa: {RELATIVE[root]}</div>
+        </div>
+        <button onClick={() => setRoot(CIRCLE[(CIRCLE.indexOf(root)+1)%12])} className="btn-sm">▶</button>
+      </div>
+
+      {/* Selector de Modo */}
+      <div style={{marginBottom:'15px'}}>
+        <select value={mode} onChange={e=>setMode(e.target.value)} style={{width:'100%', padding:'10px', background:'#1e293b', color:'white', border:'none', borderRadius:'8px'}}>
+          {Object.keys(MODES).map(m=><option key={m}>{m}</option>)}
+        </select>
+      </div>
+
+      {/* Fretboard */}
+      <div className="card" style={{overflowX:'auto'}}>
+        {INSTRUMENTS[inst].strings.slice().reverse().map((s, i) => (
+          <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'4px'}}>
+            <div style={{width:'25px', fontSize:'11px', fontWeight:'bold', color:'#475569'}}>{s}</div>
+            {Array.from({length:13}).map((_, f) => {
+              const note = NOTES[(NOTES.indexOf(s)+f)%12];
+              const isR = note === root;
+              const isS = sn.includes(note);
+              return (
+                <div key={f} style={{flex:1, minWidth:'35px', height:'32px', borderLeft:'2px solid #334155', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', background:f===0?'#1e1b14':''}}>
+                  <div style={{width:'100%', height:'2px', background:'#334155', position:'absolute'}}/>
+                  {isS && (
+                    <div style={{zIndex:1, width:'24px', height:'24px', borderRadius:'50%', background:isR?'#3b82f6':'#15803d', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'bold', border:'1px solid white'}}>
+                      {note}
                     </div>
-                    <div className="footer">Barreta Producciones © 2026</div>
+                  )}
                 </div>
-            );
-        }
+              );
+            })}
+          </div>
+        ))}
+        <div style={{display:'flex', marginLeft:'25px', marginTop:'5px'}}>
+          {Array.from({length:13}).map((_, f) => <div key={f} style={{flex:1, minWidth:'35px', textAlign:'center', fontSize:'9px', color:'#475569'}}>{f}</div>)}
+        </div>
+      </div>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+      <div style={{textAlign:'center', fontSize:'11px', color:'#475569', marginTop:'20px'}}>
+        Barreta Producciones © 2026
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>
 

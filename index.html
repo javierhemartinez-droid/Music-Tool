@@ -3,21 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎵 Barreta Music Compass</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+<title>🎵 Music Compass</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #080d1a; color: #e2e8f0; font-family: system-ui, sans-serif; padding-bottom: 40px; }
-  .container { max-width: 800px; margin: 0 auto; padding: 15px; }
-  .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-  .btn-sm { background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 7px; padding: 8px 12px; cursor: pointer; font-size: 12px; }
-  .active-btn { background: #1d4ed8 !important; color: white !important; border-color: #60a5fa !important; }
-  select { width: 100%; padding: 10px; background: #1e293b; color: white; border: none; borderRadius: 8px; margin-bottom: 15px; }
-  .tab-bar { display: flex; border-radius: 10px; overflow: hidden; margin-bottom: 15px; }
-  .tab-btn { flex: 1; padding: 12px; background: #0f172a; border: none; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; }
-  .active-tab { background: #1d4ed8; color: white; border-bottom: 2px solid #60a5fa; }
+  body { background: #080d1a; color: #e2e8f0; font-family: Georgia, 'Times New Roman', serif; }
+  select { appearance: none; -webkit-appearance: none; }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #0f172a; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 </style>
 </head>
 <body>
@@ -26,110 +23,345 @@
 const { useState } = React;
 
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const CIRCLE = ['C','G','D','A','E','B','F#','C#','G#','D#','A#','F'];
-const RELATIVE = {'C':'Am','G':'Em','D':'Bm','A':'F#m','E':'C#m','B':'G#m','F#':'D#m','C#':'A#m','G#':'Fm','D#':'Cm','A#':'Gm','F':'Dm'};
+const CIRCLE_OF_FIFTHS = ['C','G','D','A','E','B','F#','C#','G#','D#','A#','F'];
+const RELATIVE_MINOR   = {'C':'Am','G':'Em','D':'Bm','A':'F#m','E':'C#m','B':'G#m','F#':'D#m','C#':'A#m','G#':'Fm','D#':'Cm','A#':'Gm','F':'Dm'};
+
 const MODES = {
-  'Mayor': {iv:[0,2,4,5,7,9,11], d:'Brillante, estable.'},
-  'Dórico': {iv:[0,2,3,5,7,9,10], d:'Jazz, melancolía.'},
-  'Frigio': {iv:[0,1,3,5,7,8,10], d:'Oscuro, flamenco.'},
-  'Lidio': {iv:[0,2,4,6,7,9,11], d:'Etéreo, soñador.'},
-  'Mixolidio': {iv:[0,2,4,5,7,9,10], d:'Rock, Blues.'},
-  'Menor': {iv:[0,2,3,5,7,8,10], d:'Triste, serio.'},
-  'Locrio': {iv:[0,1,3,4,6,8,10], d:'Inestable.'}
+  'Mayor (Jónico)': { intervals:[0,2,4,5,7,9,11], desc:'Feliz, brillante, estable.' },
+  'Dórico':         { intervals:[0,2,3,5,7,9,10],  desc:'Melancólico pero optimista. Funk, jazz.' },
+  'Frigio':         { intervals:[0,1,3,5,7,8,10],  desc:'Oscuro, misterioso. Flamenco, metal.' },
+  'Lidio':          { intervals:[0,2,4,6,7,9,11],  desc:'Soñador, etéreo. Jazz, bandas sonoras.' },
+  'Mixolidio':      { intervals:[0,2,4,5,7,9,10],  desc:'Bluesy, dominante. Blues, rock, funk.' },
+  'Menor (Eólico)': { intervals:[0,2,3,5,7,8,10],  desc:'Triste, serio. Escala menor natural.' },
+  'Locrio':         { intervals:[0,1,3,4,6,8,10],  desc:'Muy inestable. Para tensiones especiales.' },
 };
 
 const INSTRUMENTS = {
-  guitar: { name:'Guitarra', strings:['E','A','D','G','B','E'] },
-  bass: { name:'Bajo', strings:['E','A','D','G'] }
+  guitar:  { name:'Guitarra', strings:['E','A','D','G','B','E'], frets:15 },
+  bass:    { name:'Bajo',     strings:['E','A','D','G'],         frets:15 },
+  ukulele: { name:'Ukelele',  strings:['G','C','E','A'],         frets:12 },
+  piano:   { name:'Piano',    strings:[],                        frets:0  },
 };
 
-function App() {
-  const [inst, setInst] = useState('guitar');
-  const [root, setRoot] = useState('C');
-  const [mode, setMode] = useState('Mayor');
-  const [tab, setTab] = useState('harmony');
+const CHORD_INT = { maj:[0,4,7], min:[0,3,7], dom:[0,4,7,10], dim:[0,3,6,9], aug:[0,4,8] };
+const ni = (root, iv) => NOTES[(NOTES.indexOf(root)+iv)%12];
+const noteAt = (open, fret) => NOTES[(NOTES.indexOf(open)+fret)%12];
+const getCN = (root, q) => (CHORD_INT[q]||[]).map(i => ni(root,i));
+const getSN = (root, mode) => { const ri=NOTES.indexOf(root); return MODES[mode]?.intervals.map(i=>NOTES[(ri+i)%12])||[]; };
 
-  const sn = MODES[mode].iv.map(i => NOTES[(NOTES.indexOf(root)+i)%12]);
-  const chords = MODES[mode].iv.map((iv, i) => {
-    const r = NOTES[(NOTES.indexOf(root)+iv)%12];
-    const qualities = ['maj','min','min','maj','7','min','dim']; // Simplificado para Mayor
-    return { r, q: qualities[i] };
-  });
+const SDEG = [
+  {iv:0,  q:'maj', r:'I',    fn:'tonica',       fl:'Tónica'},
+  {iv:2,  q:'min', r:'ii',   fn:'subdominante', fl:'Subdominante'},
+  {iv:4,  q:'min', r:'iii',  fn:'tonica',       fl:'Tónica'},
+  {iv:5,  q:'maj', r:'IV',   fn:'subdominante', fl:'Subdominante'},
+  {iv:7,  q:'dom', r:'V7',   fn:'dominante',    fl:'Dominante'},
+  {iv:9,  q:'min', r:'vi',   fn:'tonica',       fl:'Tónica'},
+  {iv:11, q:'dim', r:'vii°', fn:'dominante',    fl:'Dominante'},
+];
 
+const cL = (root,q) => root+(q==='maj'?'':q==='min'?'m':q==='dom'?'7':q==='dim'?'°':'+');
+
+const buildP = (root) => {
+  const d = SDEG.map(s => ({...s, root:ni(root,s.iv)}));
+  const [I,ii,iii,IV,V,vi,vii]=d;
+  const sd=(r)=>({root:ni(r,7),q:'dom',r:'V7/',fn:'dominante',fl:'Dom. Sec.'});
+  return [
+    {id:'tonal',name:'Funciones Tonales',sub:'Los 7 acordes de la tonalidad',
+     book:'Cada acorde tiene una función: Tónica (reposo), Subdominante (tensión media), Dominante (máxima tensión). Los acordes de la misma función son intercambiables. Ej: Em y Am reemplazan a C.',
+     chords:d.map(s=>({root:s.root,q:s.q,r:s.r,fn:s.fn,fl:s.fl}))},
+    {id:'251',name:'Progresión 2–5–1',sub:'La más usada en jazz',
+     book:'El movimiento ii → V7 → I es el motor armónico del jazz. El ii genera expectativa, el V7 crea máxima tensión, y el I resuelve.',
+     chords:[{root:ii.root,q:'min',r:'ii',fn:'subdominante',fl:'2do grado'},{root:V.root,q:'dom',r:'V7',fn:'dominante',fl:'5to grado'},{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'1er grado'}]},
+    {id:'6251',name:'Progresión 6–2–5–1',sub:'Extensión del 2–5–1',
+     book:'El vi agrega más movimiento antes del ii. Muy común en standards de jazz. El vi puede hacerse dominante para aún más tensión.',
+     chords:[{root:vi.root,q:'min',r:'vi',fn:'tonica',fl:'6to grado'},{root:ii.root,q:'min',r:'ii',fn:'subdominante',fl:'2do grado'},{root:V.root,q:'dom',r:'V7',fn:'dominante',fl:'5to grado'},{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'1er grado'}]},
+    {id:'cadencias',name:'Cadencias',sub:'Cómo cerrar frases musicales',
+     book:'Cadencia perfecta (V7→I): el cierre más contundente. Cadencia plagal (IV→I): más suave. El vii° puede reemplazar al V7 como dominante alternativo.',
+     chords:[{root:IV.root,q:'maj',r:'IV',fn:'subdominante',fl:'Plagal: IV→I'},{root:V.root,q:'dom',r:'V7',fn:'dominante',fl:'Perfecta: V7→I'},{root:vii.root,q:'dim',r:'vii°',fn:'dominante',fl:'Alt: vii°→I'},{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'Resolución'}]},
+    {id:'secsec',name:'Dominantes Secundarios',sub:'V7 de cada acorde',
+     book:'Cada acorde puede ser precedido por su propio V7 personal. Esto jala el oído hacia ese acorde y genera color aunque no sea el I.',
+     chords:[{...sd(I.root),fl:'V7/I',r:'V7/I'},{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'I'},{...sd(IV.root),fl:'V7/IV',r:'V7/IV'},{root:IV.root,q:'maj',r:'IV',fn:'subdominante',fl:'IV'},{...sd(V.root),fl:'V7/V',r:'V7/V'},{root:V.root,q:'dom',r:'V7',fn:'dominante',fl:'V7'}]},
+    {id:'chain',name:'Cadena de Dominantes',sub:'Dominantes separados por cuartas',
+     book:'Una cadena de acordes dominantes, cada uno a distancia de cuarta del anterior. Cada acorde jala al siguiente. Muy usado en jazz para moverse entre tonalidades.',
+     chords:[{root:ni(I.root,2),q:'dom',r:'II7',fn:'dominante',fl:'Inicio'},{root:V.root,q:'dom',r:'V7',fn:'dominante',fl:'→ 4ta ↓'},{root:ni(V.root,5),q:'dom',r:'bVII7',fn:'dominante',fl:'→ 4ta ↓'},{root:ni(I.root,5),q:'dom',r:'IV7',fn:'dominante',fl:'→ 4ta ↓'},{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'Resolución'}]},
+    {id:'tritone',name:'Sustituto Tritonal',sub:'Reemplazar V7 por su S.T.',
+     book:'El G7 y el Db7 comparten las mismas notas de tensión (B y F). Por eso son intercambiables. Bien usado es increíble; mal usado, es horroroso.',
+     chords:[{root:ii.root,q:'min',r:'ii',fn:'subdominante',fl:'2do grado'},{root:V.root,q:'dom',r:'V7',fn:'dominante',fl:'Dominante'},{root:ni(V.root,6),q:'dom',r:'bII7',fn:'tension',fl:'S.T. (±tritono)'},{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'Resolución'}]},
+    {id:'bridge',name:'Puente / Modulación',sub:'Moverse entre tonalidades',
+     book:'Un acorde puede pertenecer a varias tonalidades (acorde pivote). Llegás al pivote y continuás en otra tonalidad. El oído lo acepta porque el acorde existe en ambas.',
+     chords:[{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'Tónica actual'},{root:IV.root,q:'maj',r:'IV',fn:'subdominante',fl:'Pivote (IV)'},{root:ni(IV.root,7),q:'dom',r:'V7',fn:'dominante',fl:'V7 nueva ton.'},{root:ni(IV.root,5),q:'maj',r:'I',fn:'tonica',fl:'Nueva tónica'}]},
+    {id:'parallel',name:'Mayor ↔ Menor (Préstamo)',sub:'Préstamo de la tonalidad paralela',
+     book:'C mayor y C menor son tonalidades paralelas. Podés pedir prestado acordes de la tonalidad menor. La progresión F – Fm – C es un ejemplo clásico y emotivo.',
+     chords:[{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'Tónica Mayor'},{root:IV.root,q:'maj',r:'IV',fn:'subdominante',fl:'IV Mayor'},{root:IV.root,q:'min',r:'iv',fn:'prestamo',fl:'iv (préstamo)'},{root:I.root,q:'maj',r:'I',fn:'tonica',fl:'Tónica Mayor'}]},
+  ];
+};
+
+const FNC = {
+  tonica:       {bg:'#1d4ed8',bd:'#60a5fa',lb:'#93c5fd'},
+  subdominante: {bg:'#15803d',bd:'#4ade80',lb:'#86efac'},
+  dominante:    {bg:'#b45309',bd:'#fbbf24',lb:'#fde68a'},
+  tension:      {bg:'#7c3aed',bd:'#c4b5fd',lb:'#ddd6fe'},
+  prestamo:     {bg:'#0f766e',bd:'#2dd4bf',lb:'#99f6e4'},
+};
+const NC = {
+  root:  {bg:'#3b82f6',bd:'#93c5fd'},
+  chord: {bg:'#a855f7',bd:'#d8b4fe'},
+  triad: {bg:'#f97316',bd:'#fdba74'},
+  scale: {bg:'#22c55e',bd:'#86efac'},
+};
+
+const getKind = (note,root,sn,tn,cn) => {
+  if(!sn.includes(note)) return null;
+  if(note===root) return 'root';
+  if(cn.length&&cn.includes(note)) return 'chord';
+  if(tn.includes(note)) return 'triad';
+  return 'scale';
+};
+
+const btnSm = {background:'#1e293b',border:'1px solid #334155',color:'#64748b',borderRadius:7,padding:'5px 11px',cursor:'pointer',fontSize:12};
+
+function Fretboard({instrument,root,scaleNotes,acn}) {
+  const {strings,frets}=INSTRUMENTS[instrument];
+  const [sp,setSp]=useState(0);
+  const vf=8, ms=frets-vf;
+  const fr=Array.from({length:vf+1},(_,i)=>sp+i);
+  const tn=getCN(root,'maj');
   return (
-    <div className="container">
-      <h1 style={{textAlign:'center', color:'#60a5fa', margin:'15px 0', fontSize:'22px'}}>Barreta Music Tool</h1>
-      
-      <div className="tab-bar">
-        <button onClick={()=>setTab('harmony')} className={`tab-btn ${tab==='harmony'?'active-tab':''}`}>Armonía</button>
-        <button onClick={()=>setTab('fretboard')} className={`tab-btn ${tab==='fretboard'?'active-tab':''}`}>Instrumento</button>
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+        <button onClick={()=>setSp(p=>Math.max(0,p-2))} disabled={sp===0} style={{...btnSm,opacity:sp===0?0.3:1}}>◀ Anterior</button>
+        <span style={{color:'#64748b',fontSize:12}}>Trastes {sp}–{sp+vf}</span>
+        <button onClick={()=>setSp(p=>Math.min(ms,p+2))} disabled={sp>=ms} style={{...btnSm,opacity:sp>=ms?0.3:1}}>Siguiente ▶</button>
       </div>
-
-      <div className="card">
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px'}}>
-           <button onClick={()=>setInst('guitar')} className={`btn-sm ${inst==='guitar'?'active-btn':''}`}>Guitarra</button>
-           <button onClick={()=>setInst('bass')} className={`btn-sm ${inst==='bass'?'active-btn':''}`}>Bajo</button>
+      <div style={{background:'#1e1b14',borderRadius:10,padding:'10px 12px',overflowX:'auto'}}>
+        <div style={{display:'flex',marginBottom:4}}>
+          <div style={{width:28,flexShrink:0}}/>
+          {fr.map(f=><div key={f} style={{flex:1,minWidth:48,textAlign:'center',fontSize:11,color:[3,5,7,9,12].includes(f)?'#f59e0b':'#475569'}}>{f}{[3,5,7,9,12].includes(f)?'·':''}</div>)}
         </div>
-        <select value={mode} onChange={e=>setMode(e.target.value)}>
-          {Object.keys(MODES).map(m=><option key={m}>{m}</option>)}
-        </select>
-        <div style={{textAlign:'center'}}>
-          <div style={{fontSize:'10px', color:'#475569'}}>TÓNICA</div>
-          <div style={{fontSize:'28px', fontWeight:'bold'}}>{root}</div>
-          <div style={{fontSize:'14px', color:'#a78bfa'}}>Relativa: {RELATIVE[root]}</div>
-        </div>
-      </div>
-
-      {tab === 'harmony' ? (
-        <div className="card">
-          <h3 style={{fontSize:'14px', marginBottom:'10px', color:'#94a3b8'}}>Grados de la escala:</h3>
-          <div style={{display:'flex', flexWrap:'wrap', gap:'8px', justifyContent:'center'}}>
-            {chords.map((c, i) => (
-              <div key={i} style={{background:'#1e293b', padding:'10px', borderRadius:'8px', textAlign:'center', minWidth:'60px'}}>
-                <div style={{fontWeight:'bold'}}>{c.r}{c.q==='min'?'m':c.q==='7'?'7':c.q==='dim'?'°':''}</div>
-                <div style={{fontSize:'10px', color:'#475569'}}>{['I','ii','iii','IV','V','vi','vii'][i]}</div>
-              </div>
-            ))}
+        {[...strings].reverse().map((on,si)=>(
+          <div key={si} style={{display:'flex',alignItems:'center',marginBottom:3}}>
+            <div style={{width:28,flexShrink:0,textAlign:'center',fontSize:11,fontWeight:700,color:scaleNotes.includes(on)?'#60a5fa':'#475569'}}>{on}</div>
+            {fr.map(fret=>{
+              const note=noteAt(on,fret);
+              const kind=getKind(note,root,scaleNotes,tn,acn);
+              return (
+                <div key={fret} style={{flex:1,minWidth:48,height:34,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',borderLeft:fret===0?'4px solid #a16207':'2px solid #334155'}}>
+                  <div style={{position:'absolute',left:0,right:0,height:2,background:'linear-gradient(90deg,#78716c,#a8a29e)',opacity:0.5,zIndex:0}}/>
+                  {kind&&<div style={{zIndex:1,width:28,height:28,borderRadius:'50%',background:NC[kind].bg,border:`2px solid ${NC[kind].bd}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'#fff',boxShadow:kind==='root'?`0 0 8px ${NC.root.bg}88`:'none'}}>{note}</div>}
+                </div>
+              );
+            })}
           </div>
-        </div>
-      ) : (
-        <div className="card" style={{overflowX:'auto', padding:'20px 10px'}}>
-          {INSTRUMENTS[inst].strings.slice().reverse().map((s, i) => (
-            <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'6px'}}>
-              <div style={{width:'20px', fontSize:'11px', fontWeight:'bold', color:'#475569'}}>{s}</div>
-              {Array.from({length:13}).map((_, f) => {
-                const note = NOTES[(NOTES.indexOf(s)+f)%12];
-                const isR = note === root;
-                const isS = sn.includes(note);
-                return (
-                  <div key={f} style={{flex:1, minWidth:'35px', height:'32px', borderLeft:'2px solid #334155', position:'relative', display:'flex', alignItems:'center', justifyContent:'center'}}>
-                    <div style={{width:'100%', height:'2px', background:'#334155', position:'absolute'}}/>
-                    {isS && <div style={{zIndex:1, width:'24px', height:'24px', borderRadius:'50%', background:isR?'#3b82f6':'#15803d', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'bold', border:'1px solid white'}}>{note}</div>}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Círculo de Quintas Simplificado */}
-      <div className="card">
-        <h3 style={{fontSize:'14px', marginBottom:'10px', color:'#94a3b8', textAlign:'center'}}>Círculo de Quintas</h3>
-        <div style={{display:'flex', flexWrap:'wrap', gap:'5px', justifyContent:'center'}}>
-          {CIRCLE.map(note => (
-            <button key={note} onClick={()=>setRoot(note)} className={`btn-sm ${root===note?'active-btn':''}`} style={{width:'40px', height:'40px', borderRadius:'50%'}}>{note}</button>
-          ))}
-        </div>
+        ))}
       </div>
-
     </div>
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+function Piano({root,scaleNotes,acn}) {
+  const wo=['C','D','E','F','G','A','B'],bs=[0,1,3,4,5],bn=['C#','D#','F#','G#','A#'];
+  const tn=getCN(root,'maj');
+  const W=38,HW=108,HB=66,BW=24,oc=[0,1];
+  const tw=oc.length*7*W;
+  const gk=(n)=>getKind(n,root,scaleNotes,tn,acn);
+  return (
+    <div style={{overflowX:'auto'}}>
+      <svg width={tw} height={HW+12} style={{display:'block',margin:'0 auto'}}>
+        {oc.map((_,oi)=>wo.map((n,wi)=>{const x=(oi*7+wi)*W;const k=gk(n);return(<g key={`w${oi}${wi}`}><rect x={x+1} y={0} width={W-2} height={HW} rx={3} fill={k?NC[k].bg:'#f8fafc'} stroke={k?NC[k].bd:'#94a3b8'} strokeWidth={k?2:1}/><text x={x+W/2} y={HW-7} textAnchor="middle" fill={k?'#fff':'#94a3b8'} fontSize={10} fontWeight={k?'bold':'normal'}>{n}</text></g>);})) }
+        {oc.map((_,oi)=>bs.map((slot,bi)=>{const x=(oi*7+slot)*W+W-BW/2;const note=bn[bi];const k=gk(note);return(<g key={`b${oi}${bi}`}><rect x={x} y={0} width={BW} height={HB} rx={2} fill={k?NC[k].bg:'#1e293b'} stroke={k?NC[k].bd:'#0f172a'} strokeWidth={k?2:1}/>{k&&<text x={x+BW/2} y={HB-6} textAnchor="middle" fill="#fff" fontSize={8} fontWeight="bold">{note.replace('#','♯')}</text>}</g>);})) }
+      </svg>
+    </div>
+  );
+}
+
+function Circle({sel,onSel,sn,acn}) {
+  const R=130,rMaj=95,rMin=58,cx=145,cy=145;
+  const relMinRoot = sel ? RELATIVE_MINOR[sel] : null;
+  return (
+    <svg width={290} height={290} style={{display:'block',margin:'0 auto'}}>
+      {/* Outer ring */}
+      <circle cx={cx} cy={cy} r={R} fill="#0a0f1e" stroke="#1e293b" strokeWidth={2}/>
+      {/* Separator between rings */}
+      <circle cx={cx} cy={cy} r={76} fill="none" stroke="#1e293b" strokeWidth={1}/>
+      {/* Inner fill */}
+      <circle cx={cx} cy={cy} r={40} fill="#0f172a"/>
+      <text x={cx} y={cy+5} textAnchor="middle" fill="#334155" fontSize={10} fontWeight="bold">5ᵃˢ</text>
+
+      {CIRCLE_OF_FIFTHS.map((key,i)=>{
+        const rm=RELATIVE_MINOR[key];
+        const a=(i/12)*2*Math.PI-Math.PI/2;
+        const x=cx+rMin*Math.cos(a),y=cy+rMin*Math.sin(a);
+        const isRelSel = key===sel;
+        return(
+          <g key={'m'+key}>
+            <circle cx={x} cy={y} r={15} fill={isRelSel?'#4c1d95':'#0f172a'} stroke={isRelSel?'#a78bfa':'#1e293b'} strokeWidth={isRelSel?2:1}/>
+            <text x={x} y={y+4} textAnchor="middle" fill={isRelSel?'#e9d5ff':'#475569'} fontSize={9} fontWeight={isRelSel?'bold':'400'}>{rm}</text>
+          </g>
+        );
+      })}
+
+      {/* Major outer ring */}
+      {CIRCLE_OF_FIFTHS.map((key,i)=>{
+        const a=(i/12)*2*Math.PI-Math.PI/2;
+        const x=cx+rMaj*Math.cos(a),y=cy+rMaj*Math.sin(a);
+        const iS=key===sel,iC=acn.includes(key),iSc=sn.includes(key);
+        return(<g key={key} onClick={()=>onSel(key)} style={{cursor:'pointer'}}>
+          <circle cx={x} cy={y} r={20} fill={iS?'#1d4ed8':iC?'#7c3aed':iSc?'#15803d33':'#1e293b'} stroke={iS?'#60a5fa':iC?'#c4b5fd':iSc?'#22c55e':'#334155'} strokeWidth={iS?2.5:iC?2:1.5}/>
+          <text x={x} y={y+5} textAnchor="middle" fill={iS||iC?'#fff':iSc?'#86efac':'#64748b'} fontSize={12} fontWeight={iS?'bold':'600'}>{key}</text>
+        </g>);
+      })}
+    </svg>
+  );
+}
+
+function ChordCard({chord,isActive,onClick}) {
+  const c=FNC[chord.fn]||FNC.tonica;
+  const notes=getCN(chord.root,chord.q);
+  const label=cL(chord.root,chord.q);
+  return(
+    <div onClick={onClick} style={{background:isActive?c.bg:'#0f172a',border:`2px solid ${isActive?c.bd:'#1e293b'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',minWidth:86,textAlign:'center',transition:'all 0.15s',boxShadow:isActive?`0 0 14px ${c.bg}66`:'none'}}>
+      <div style={{fontSize:18,fontWeight:700,color:isActive?'#fff':'#e2e8f0',marginBottom:2}}>{label}</div>
+      <div style={{fontSize:10,color:isActive?c.lb:'#475569',marginBottom:3}}>{chord.r}</div>
+      <div style={{fontSize:10,color:isActive?c.lb:'#334155',marginBottom:5}}>{notes.join('·')}</div>
+      <div style={{fontSize:10,fontWeight:600,color:isActive?c.lb:'#334155',background:isActive?`${c.bd}22`:'#1e293b',borderRadius:6,padding:'2px 5px',display:'inline-block'}}>{chord.fl}</div>
+    </div>
+  );
+}
+
+function App() {
+  const [inst,setInst]=useState('guitar');
+  const [root,setRoot]=useState('C');
+  const [mode,setMode]=useState('Mayor (Jónico)');
+  const [tab,setTab]=useState('harmony');
+  const [pid,setPid]=useState('tonal');
+  const [cidx,setCidx]=useState(null);
+
+  const sn=getSN(root,mode);
+  const progs=buildP(root);
+  const ap=progs.find(p=>p.id===pid)||progs[0];
+  const ac=cidx!==null?ap.chords[cidx]:null;
+  const acn=ac?getCN(ac.root,ac.q):[];
+
+  const navKey=(d)=>{setCidx(null);setRoot(CIRCLE_OF_FIFTHS[(CIRCLE_OF_FIFTHS.indexOf(root)+d+12)%12]);};
+  const bTab=(a)=>({flex:1,padding:'9px 0',border:'none',cursor:'pointer',fontSize:12,fontWeight:600,background:a?'#1d4ed8':'#0f172a',color:a?'#fff':'#64748b',transition:'all 0.15s'});
+  const sel={background:'#1e293b',border:'1px solid #334155',color:'#e2e8f0',borderRadius:8,padding:'7px 11px',fontSize:13,outline:'none'};
+  const FNL={tonica:'Tónica',subdominante:'Subdominante',dominante:'Dominante',tension:'Tensión (S.T.)',prestamo:'Préstamo modal'};
+  const QN={maj:'Mayor',min:'Menor',dom:'Dominante (7ª)',dim:'Disminuido',aug:'Aumentado'};
+
+  return(
+    <div style={{minHeight:'100vh',background:'#080d1a',color:'#e2e8f0',fontFamily:"Georgia,'Times New Roman',serif",paddingBottom:48}}>
+      <div style={{background:'linear-gradient(180deg,#0f172a,#080d1a)',borderBottom:'1px solid #1e293b',padding:'18px 16px',textAlign:'center'}}>
+        <h1 style={{margin:0,fontSize:24,fontWeight:700,background:'linear-gradient(90deg,#60a5fa,#a78bfa)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>🎵 Music Compass</h1>
+        <p style={{margin:'4px 0 0',color:'#475569',fontSize:12}}>Basado en <em>Armonía Ilustrada</em> · Brian Callipari</p>
+      </div>
+
+      <div style={{maxWidth:860,margin:'0 auto',padding:'14px 12px'}}>
+
+        <div style={{display:'flex',flexWrap:'wrap',gap:6,justifyContent:'center',marginBottom:12}}>
+          {Object.entries(INSTRUMENTS).map(([k,v])=>(
+            <button key={k} onClick={()=>setInst(k)} style={{...btnSm,fontWeight:inst===k?700:400,background:inst===k?'#1d4ed8':'#1e293b',border:`1px solid ${inst===k?'#3b82f6':'#334155'}`,color:inst===k?'#fff':'#94a3b8'}}>{v.name}</button>
+          ))}
+        </div>
+
+        <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:12,padding:'12px 14px',marginBottom:12,display:'flex',flexWrap:'wrap',gap:12,alignItems:'center',justifyContent:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <button onClick={()=>navKey(-1)} style={btnSm}>◀</button>
+            <div style={{minWidth:60,textAlign:'center'}}>
+              <div style={{fontSize:10,color:'#475569',marginBottom:1}}>TÓNICA</div>
+              <div style={{fontSize:22,fontWeight:700,color:'#60a5fa'}}>{root}</div>
+            </div>
+            <button onClick={()=>navKey(1)} style={btnSm}>▶</button>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:'#475569',marginBottom:3}}>MODO / ESCALA</div>
+            <select value={mode} onChange={e=>{setMode(e.target.value);setCidx(null);}} style={sel}>
+              {Object.keys(MODES).map(m=><option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{display:'flex',borderRadius:10,overflow:'hidden',border:'1px solid #1e293b',marginBottom:12}}>
+          {[['harmony','🎼 Armonía'],['instrument','🎸 Instrumento'],['circle','⭕ Círculo']].map(([t,l])=>(
+            <button key={t} onClick={()=>setTab(t)} style={bTab(tab===t)}>{l}</button>
+          ))}
+        </div>
+
+        {tab==='harmony'&&(
+          <div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:12}}>
+              {progs.map(p=>(
+                <button key={p.id} onClick={()=>{setPid(p.id);setCidx(null);}} style={{...btnSm,fontSize:11,background:pid===p.id?'#1e3a5f':'#0f172a',border:`1px solid ${pid===p.id?'#3b82f6':'#1e293b'}`,color:pid===p.id?'#93c5fd':'#64748b',fontWeight:pid===p.id?700:400}}>{p.name}</button>
+              ))}
+            </div>
+            <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:12,padding:'12px 14px',marginBottom:12}}>
+              <div style={{fontWeight:700,fontSize:16,color:'#a5b4fc',marginBottom:3}}>{ap.name}</div>
+              <div style={{color:'#64748b',fontSize:12,marginBottom:8}}>{ap.sub}</div>
+              <div style={{color:'#94a3b8',fontSize:13,lineHeight:1.65,borderLeft:'2px solid #1e3a5f',paddingLeft:12}}>💡 {ap.book}</div>
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginBottom:12}}>
+              {ap.chords.map((c,i)=><ChordCard key={i} chord={c} isActive={cidx===i} onClick={()=>setCidx(cidx===i?null:i)}/>)}
+            </div>
+            {ac&&(()=>{const c=FNC[ac.fn]||FNC.tonica;const notes=getCN(ac.root,ac.q);return(
+              <div style={{background:'#0f172a',border:`1px solid ${c.bd}`,borderRadius:12,padding:'12px 14px',marginBottom:12}}>
+                <div style={{fontWeight:700,fontSize:15,color:'#e2e8f0',marginBottom:6}}>Acorde: <span style={{color:c.bd}}>{cL(ac.root,ac.q)}</span><span style={{fontSize:11,color:'#475569',marginLeft:10}}>{ac.fl}</span></div>
+                <div style={{fontSize:13,color:'#94a3b8',marginBottom:4}}>Notas: <span style={{color:'#e2e8f0',letterSpacing:1}}>{notes.join('  ·  ')}</span></div>
+                <div style={{fontSize:12,color:'#475569'}}>Tipo: {QN[ac.q]||ac.q}</div>
+              </div>
+            );})()}
+            <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:12,padding:14}}>
+              <div style={{fontSize:12,color:'#475569',marginBottom:10,textAlign:'center'}}>{ac?`Notas del acorde ${cL(ac.root,ac.q)} en el instrumento`:`Escala de ${root} en el instrumento`}</div>
+              {inst==='piano'?<Piano root={root} scaleNotes={sn} acn={acn}/>:<Fretboard instrument={inst} root={root} scaleNotes={sn} acn={acn}/>}
+              <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginTop:12}}>
+                {[['root','Tónica'],['chord','Acorde activo'],['triad','Tríada'],['scale','Escala']].map(([k,l])=>(
+                  <div key={k} style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'#64748b'}}>
+                    <div style={{width:11,height:11,borderRadius:'50%',background:NC[k].bg,border:`1px solid ${NC[k].bd}`}}/>{l}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginTop:12}}>
+              {Object.entries(FNC).map(([fn,c])=>(
+                <div key={fn} style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'#64748b'}}>
+                  <div style={{width:11,height:11,borderRadius:3,background:c.bg,border:`1px solid ${c.bd}`}}/>{FNL[fn]}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab==='instrument'&&(
+          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:12,padding:14}}>
+            {inst==='piano'?<Piano root={root} scaleNotes={sn} acn={acn}/>:<Fretboard instrument={inst} root={root} scaleNotes={sn} acn={acn}/>}
+            <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginTop:12}}>
+              {[['root','Tónica'],['chord','Acorde'],['triad','Tríada'],['scale','Escala']].map(([k,l])=>(
+                <div key={k} style={{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'#64748b'}}>
+                  <div style={{width:12,height:12,borderRadius:'50%',background:NC[k].bg,border:`1px solid ${NC[k].bd}`}}/>{l}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab==='circle'&&(
+          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:12,padding:16,display:'flex',flexDirection:'column',alignItems:'center'}}>
+            <Circle sel={root} onSel={k=>{setRoot(k);setCidx(null);}} sn={sn} acn={acn}/>
+            <div style={{marginTop:10,textAlign:'center'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:6}}>
+                <div style={{fontSize:13,color:'#60a5fa',fontWeight:700}}>{root} Mayor</div>
+                <div style={{color:'#334155',fontSize:12}}>↔</div>
+                <div style={{fontSize:13,color:'#a78bfa',fontWeight:700}}>{RELATIVE_MINOR[root]} relativa menor</div>
+              </div>
+              <p style={{color:'#475569',fontSize:11,maxWidth:280}}>Anillo exterior = tonalidades mayores · Anillo interior = relativas menores · Comparten la misma armadura</p>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
-

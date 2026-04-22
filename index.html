@@ -10,11 +10,14 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #080d1a; color: #e2e8f0; font-family: system-ui, sans-serif; padding-bottom: 40px; }
-  .container { maxWidth: 800px; margin: 0 auto; padding: 15px; }
-  select, button { font-family: inherit; }
+  .container { max-width: 800px; margin: 0 auto; padding: 15px; }
   .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-  .btn-sm { background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
-  .active-btn { background: #3b82f6 !important; color: white !important; border-color: #60a5fa !important; }
+  .btn-sm { background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 7px; padding: 8px 12px; cursor: pointer; font-size: 12px; }
+  .active-btn { background: #1d4ed8 !important; color: white !important; border-color: #60a5fa !important; }
+  select { width: 100%; padding: 10px; background: #1e293b; color: white; border: none; borderRadius: 8px; margin-bottom: 15px; }
+  .tab-bar { display: flex; border-radius: 10px; overflow: hidden; margin-bottom: 15px; }
+  .tab-btn { flex: 1; padding: 12px; background: #0f172a; border: none; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; }
+  .active-tab { background: #1d4ed8; color: white; border-bottom: 2px solid #60a5fa; }
 </style>
 </head>
 <body>
@@ -25,7 +28,16 @@ const { useState } = React;
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const CIRCLE = ['C','G','D','A','E','B','F#','C#','G#','D#','A#','F'];
 const RELATIVE = {'C':'Am','G':'Em','D':'Bm','A':'F#m','E':'C#m','B':'G#m','F#':'D#m','C#':'A#m','G#':'Fm','D#':'Cm','A#':'Gm','F':'Dm'};
-const MODES = {'Mayor':[0,2,4,5,7,9,11], 'Dórico':[0,2,3,5,7,9,10], 'Frigio':[0,1,3,5,7,8,10], 'Mixolidio':[0,2,4,5,7,9,10], 'Menor':[0,2,3,5,7,8,10]};
+const MODES = {
+  'Mayor': {iv:[0,2,4,5,7,9,11], d:'Brillante, estable.'},
+  'Dórico': {iv:[0,2,3,5,7,9,10], d:'Jazz, melancolía.'},
+  'Frigio': {iv:[0,1,3,5,7,8,10], d:'Oscuro, flamenco.'},
+  'Lidio': {iv:[0,2,4,6,7,9,11], d:'Etéreo, soñador.'},
+  'Mixolidio': {iv:[0,2,4,5,7,9,10], d:'Rock, Blues.'},
+  'Menor': {iv:[0,2,3,5,7,8,10], d:'Triste, serio.'},
+  'Locrio': {iv:[0,1,3,4,6,8,10], d:'Inestable.'}
+};
+
 const INSTRUMENTS = {
   guitar: { name:'Guitarra', strings:['E','A','D','G','B','E'] },
   bass: { name:'Bajo', strings:['E','A','D','G'] }
@@ -35,69 +47,82 @@ function App() {
   const [inst, setInst] = useState('guitar');
   const [root, setRoot] = useState('C');
   const [mode, setMode] = useState('Mayor');
-  const [tab, setTab] = useState('fretboard');
+  const [tab, setTab] = useState('harmony');
 
-  const sn = MODES[mode].map(i => NOTES[(NOTES.indexOf(root)+i)%12]);
+  const sn = MODES[mode].iv.map(i => NOTES[(NOTES.indexOf(root)+i)%12]);
+  const chords = MODES[mode].iv.map((iv, i) => {
+    const r = NOTES[(NOTES.indexOf(root)+iv)%12];
+    const qualities = ['maj','min','min','maj','7','min','dim']; // Simplificado para Mayor
+    return { r, q: qualities[i] };
+  });
 
   return (
     <div className="container">
-      <h1 style={{textAlign:'center', color:'#60a5fa', margin:'20px 0', fontSize:'24px'}}>Music Tool</h1>
+      <h1 style={{textAlign:'center', color:'#60a5fa', margin:'15px 0', fontSize:'22px'}}>Barreta Music Tool</h1>
       
-      {/* Selector de Instrumento */}
-      <div style={{display:'flex', gap:'8px', justifyContent:'center', marginBottom:'15px'}}>
-        {Object.keys(INSTRUMENTS).map(k => (
-          <button key={k} onClick={()=>setInst(k)} className={`btn-sm ${inst===k?'active-btn':''}`}>{INSTRUMENTS[k].name}</button>
-        ))}
+      <div className="tab-bar">
+        <button onClick={()=>setTab('harmony')} className={`tab-btn ${tab==='harmony'?'active-tab':''}`}>Armonía</button>
+        <button onClick={()=>setTab('fretboard')} className={`tab-btn ${tab==='fretboard'?'active-tab':''}`}>Instrumento</button>
       </div>
 
-      {/* Control de Tónica */}
-      <div className="card" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <button onClick={() => setRoot(CIRCLE[(CIRCLE.indexOf(root)+11)%12])} className="btn-sm">◀</button>
-        <div style={{textAlign:'center'}}>
-          <div style={{fontSize:'10px', color:'#475569'}}>TÓNICA</div>
-          <div style={{fontSize:'24px', fontWeight:'bold'}}>{root}</div>
-          <div style={{fontSize:'12px', color:'#a78bfa'}}>Relativa: {RELATIVE[root]}</div>
+      <div className="card">
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px'}}>
+           <button onClick={()=>setInst('guitar')} className={`btn-sm ${inst==='guitar'?'active-btn':''}`}>Guitarra</button>
+           <button onClick={()=>setInst('bass')} className={`btn-sm ${inst==='bass'?'active-btn':''}`}>Bajo</button>
         </div>
-        <button onClick={() => setRoot(CIRCLE[(CIRCLE.indexOf(root)+1)%12])} className="btn-sm">▶</button>
-      </div>
-
-      {/* Selector de Modo */}
-      <div style={{marginBottom:'15px'}}>
-        <select value={mode} onChange={e=>setMode(e.target.value)} style={{width:'100%', padding:'10px', background:'#1e293b', color:'white', border:'none', borderRadius:'8px'}}>
+        <select value={mode} onChange={e=>setMode(e.target.value)}>
           {Object.keys(MODES).map(m=><option key={m}>{m}</option>)}
         </select>
-      </div>
-
-      {/* Fretboard */}
-      <div className="card" style={{overflowX:'auto'}}>
-        {INSTRUMENTS[inst].strings.slice().reverse().map((s, i) => (
-          <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'4px'}}>
-            <div style={{width:'25px', fontSize:'11px', fontWeight:'bold', color:'#475569'}}>{s}</div>
-            {Array.from({length:13}).map((_, f) => {
-              const note = NOTES[(NOTES.indexOf(s)+f)%12];
-              const isR = note === root;
-              const isS = sn.includes(note);
-              return (
-                <div key={f} style={{flex:1, minWidth:'35px', height:'32px', borderLeft:'2px solid #334155', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', background:f===0?'#1e1b14':''}}>
-                  <div style={{width:'100%', height:'2px', background:'#334155', position:'absolute'}}/>
-                  {isS && (
-                    <div style={{zIndex:1, width:'24px', height:'24px', borderRadius:'50%', background:isR?'#3b82f6':'#15803d', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'bold', border:'1px solid white'}}>
-                      {note}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-        <div style={{display:'flex', marginLeft:'25px', marginTop:'5px'}}>
-          {Array.from({length:13}).map((_, f) => <div key={f} style={{flex:1, minWidth:'35px', textAlign:'center', fontSize:'9px', color:'#475569'}}>{f}</div>)}
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:'10px', color:'#475569'}}>TÓNICA</div>
+          <div style={{fontSize:'28px', fontWeight:'bold'}}>{root}</div>
+          <div style={{fontSize:'14px', color:'#a78bfa'}}>Relativa: {RELATIVE[root]}</div>
         </div>
       </div>
 
-      <div style={{textAlign:'center', fontSize:'11px', color:'#475569', marginTop:'20px'}}>
-        Barreta Producciones © 2026
+      {tab === 'harmony' ? (
+        <div className="card">
+          <h3 style={{fontSize:'14px', marginBottom:'10px', color:'#94a3b8'}}>Grados de la escala:</h3>
+          <div style={{display:'flex', flexWrap:'wrap', gap:'8px', justifyContent:'center'}}>
+            {chords.map((c, i) => (
+              <div key={i} style={{background:'#1e293b', padding:'10px', borderRadius:'8px', textAlign:'center', minWidth:'60px'}}>
+                <div style={{fontWeight:'bold'}}>{c.r}{c.q==='min'?'m':c.q==='7'?'7':c.q==='dim'?'°':''}</div>
+                <div style={{fontSize:'10px', color:'#475569'}}>{['I','ii','iii','IV','V','vi','vii'][i]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="card" style={{overflowX:'auto', padding:'20px 10px'}}>
+          {INSTRUMENTS[inst].strings.slice().reverse().map((s, i) => (
+            <div key={i} style={{display:'flex', alignItems:'center', marginBottom:'6px'}}>
+              <div style={{width:'20px', fontSize:'11px', fontWeight:'bold', color:'#475569'}}>{s}</div>
+              {Array.from({length:13}).map((_, f) => {
+                const note = NOTES[(NOTES.indexOf(s)+f)%12];
+                const isR = note === root;
+                const isS = sn.includes(note);
+                return (
+                  <div key={f} style={{flex:1, minWidth:'35px', height:'32px', borderLeft:'2px solid #334155', position:'relative', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    <div style={{width:'100%', height:'2px', background:'#334155', position:'absolute'}}/>
+                    {isS && <div style={{zIndex:1, width:'24px', height:'24px', borderRadius:'50%', background:isR?'#3b82f6':'#15803d', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'bold', border:'1px solid white'}}>{note}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Círculo de Quintas Simplificado */}
+      <div className="card">
+        <h3 style={{fontSize:'14px', marginBottom:'10px', color:'#94a3b8', textAlign:'center'}}>Círculo de Quintas</h3>
+        <div style={{display:'flex', flexWrap:'wrap', gap:'5px', justifyContent:'center'}}>
+          {CIRCLE.map(note => (
+            <button key={note} onClick={()=>setRoot(note)} className={`btn-sm ${root===note?'active-btn':''}`} style={{width:'40px', height:'40px', borderRadius:'50%'}}>{note}</button>
+          ))}
+        </div>
       </div>
+
     </div>
   );
 }

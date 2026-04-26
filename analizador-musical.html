@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analizador Musical</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #111;
+    color: #eee;
+    font-family: Georgia, serif;
+    padding: 1.5rem 1rem;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    color: #e8c84a;
+    font-size: 1.6rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+  }
+  .subtitle {
+    text-align: center;
+    color: #666;
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+  }
+  .dropzone {
+    border: 2px dashed #2a2a2a;
+    border-radius: 12px;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    background: #1a1a1a;
+    transition: all 0.2s;
+    margin-bottom: 1.2rem;
+  }
+  .dropzone.active { border-color: #e8c84a; background: #1f1f1f; }
+  .dropzone-icon { font-size: 2.2rem; margin-bottom: 0.5rem; }
+  .dropzone-text { color: #666; font-size: 0.9rem; }
+  .file-name { color: #e8c84a; font-weight: bold; font-size: 0.95rem; }
+  .file-size { color: #555; font-size: 0.8rem; margin-top: 0.2rem; }
+  #fileInput { display: none; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1.2rem;
+  }
+  .btn-primary { background: #e8c84a; color: #111; }
+  .btn-primary:disabled { background: #333; color: #555; cursor: not-allowed; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #e8c84a;
+    color: #e8c84a;
+    margin-top: 0.5rem;
+  }
+  .loading {
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+    padding: 1rem;
+    display: none;
+  }
+  .loading small { display: block; color: #555; font-size: 0.8rem; margin-top: 0.3rem; }
+  .error {
+    background: #2a1515;
+    border: 1px solid #5a2020;
+    border-radius: 8px;
+    padding: 1rem;
+    color: #ff8888;
+    font-size: 0.9rem;
+    display: none;
+    margin-bottom: 1rem;
+  }
+  .results { display: none; }
+  .card {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    color: #e8c84a;
+    font-weight: bold;
+    font-size: 0.95rem;
+    margin-bottom: 0.8rem;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #222;
+    font-size: 0.9rem;
+  }
+  .row-label { color: #666; }
+  .row-val { color: #ddd; text-align: right; }
+  .chord-pill {
+    display: inline-block;
+    background: #222;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.95rem;
+    font-weight: bold;
+    margin: 0.2rem 0.2rem 0.2rem 0;
+  }
+  .section-name { color: #e8c84a; font-weight: bold; margin-bottom: 0.3rem; }
+  .section-time { color: #555; font-size: 0.78rem; }
+  .section-desc { color: #aaa; font-size: 0.88rem; margin-top: 0.2rem; }
+  .section-block { margin-bottom: 0.9rem; }
+  .tab-desc { color: #888; font-size: 0.83rem; margin-bottom: 0.7rem; }
+  pre {
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    background: #0d0d0d;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 0.9rem;
+    overflow-x: auto;
+    color: #b8e0b8;
+    line-height: 1.7;
+    white-space: pre;
+  }
+  .notes { color: #aaa; line-height: 1.6; font-size: 0.9rem; }
+  @media print {
+    body { background: white; color: black; }
+    .dropzone, .btn, .loading, .error { display: none !important; }
+    .card { border: 1px solid #ccc; background: #f9f9f9; }
+    .card-title { color: #333; }
+    pre { color: #1a4a1a; background: #f0f7f0; }
+    .chord-pill { background: #eee; border-color: #ccc; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🎸 Analizador Musical</h1>
+<p class="subtitle">Subí tu canción · Claude detecta acordes, estructura y tablatura</p>
+
+<div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+  <div class="dropzone-icon">🎵</div>
+  <div id="dropText" class="dropzone-text">Tocá acá para elegir un MP3</div>
+</div>
+<input type="file" id="fileInput" accept="audio/*">
+
+<button class="btn btn-primary" id="analyzeBtn" disabled onclick="analyze()">
+  Analizar canción
+</button>
+
+<div class="loading" id="loading">
+  Claude está escuchando tu canción...
+  <small>Puede tardar 20–40 segundos</small>
+</div>
+
+<div class="error" id="error"></div>
+
+<div class="results" id="results">
+  <div class="card">
+    <div class="card-title">🎼 Estilo</div>
+    <div id="estiloRows"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎸 Instrumentos</div>
+    <div id="instrumentos"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📐 Estructura</div>
+    <div id="estructura"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎵 Acordes por sección</div>
+    <div id="acordes"></div>
+  </div>
+  <div class="card" id="tabCard">
+    <div class="card-title">🎸 Tablatura sugerida</div>
+    <div class="tab-desc" id="tabDesc"></div>
+    <pre id="tabContent"></pre>
+  </div>
+  <div class="card" id="notasCard">
+    <div class="card-title">📝 Notas</div>
+    <div class="notes" id="notas"></div>
+  </div>
+  <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+</div>
+
+<script>
+let selectedFile = null;
+
+document.getElementById('fileInput').addEventListener('change', function() {
+  const f = this.files[0];
+  if (f) setFile(f);
+});
+
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('active'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('active'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('active');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+
+function setFile(f) {
+  selectedFile = f;
+  document.getElementById('dropText').innerHTML =
+    `<div class="file-name">${f.name}</div><div class="file-size">${(f.size/1024/1024).toFixed(1)} MB</div>`;
+  document.getElementById('analyzeBtn').disabled = false;
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('error').style.display = 'none';
+}
+
+async function analyze() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+
+  try {
+    const b64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('No se pudo leer el archivo'));
+      r.readAsDataURL(selectedFile);
+    });
+
+    const mediaType = selectedFile.type || 'audio/mpeg';
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1800,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: { type: 'base64', media_type: mediaType, data: b64 }
+            },
+            {
+              type: 'text',
+              text: `Escuchá este audio musical con atención. Analizá y respondé SOLO en formato JSON válido, sin texto adicional ni backticks. El JSON debe tener esta estructura exacta:
+
+{
+  "estilo": {
+    "genero": "string",
+    "feeling": "string",
+    "tempo": "string (ej: lento ~70bpm)",
+    "compas": "string (ej: 4/4)"
+  },
+  "tonalidad": "string (ej: La menor)",
+  "instrumentos": ["string"],
+  "estructura": [
+    { "nombre": "string", "duracion": "string (ej: 0:00 - 0:15)", "descripcion": "string" }
+  ],
+  "acordes": [
+    { "seccion": "string", "progresion": ["string"] }
+  ],
+  "tablatura": {
+    "descripcion": "string (qué es lo que transcribís)",
+    "tab": "string (tablatura en texto plano, cuerdas E A D G B e)"
+  },
+  "notas_adicionales": "string"
+}`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const r = JSON.parse(clean);
+
+    // Estilo
+    const rows = [
+      ['Género', r.estilo?.genero],
+      ['Feeling', r.estilo?.feeling],
+      ['Tempo', r.estilo?.tempo],
+      ['Compás', r.estilo?.compas],
+      ['Tonalidad', r.tonalidad]
+    ];
+    document.getElementById('estiloRows').innerHTML = rows
+      .filter(([,v]) => v)
+      .map(([l,v]) => `<div class="row"><span class="row-label">${l}</span><span class="row-val">${v}</span></div>`)
+      .join('');
+
+    // Instrumentos
+    document.getElementById('instrumentos').innerHTML = (r.instrumentos || [])
+      .map(i => `<div class="row"><span class="row-val">${i}</span></div>`)
+      .join('');
+
+    // Estructura
+    document.getElementById('estructura').innerHTML = (r.estructura || [])
+      .map(s => `<div class="section-block">
+        <div class="section-name">${s.nombre} <span class="section-time">${s.duracion || ''}</span></div>
+        <div class="section-desc">${s.descripcion}</div>
+      </div>`).join('');
+
+    // Acordes
+    document.getElementById('acordes').innerHTML = (r.acordes || [])
+      .map(s => `<div class="section-block">
+        <div class="section-name">${s.seccion}</div>
+        <div>${(s.progresion || []).map(a => `<span class="chord-pill">${a}</span>`).join('')}</div>
+      </div>`).join('');
+
+    // Tablatura
+    if (r.tablatura) {
+      document.getElementById('tabDesc').textContent = r.tablatura.descripcion || '';
+      document.getElementById('tabContent').textContent = r.tablatura.tab || '';
+      document.getElementById('tabCard').style.display = 'block';
+    } else {
+      document.getElementById('tabCard').style.display = 'none';
+    }
+
+    // Notas
+    if (r.notas_adicionales) {
+      document.getElementById('notas').textContent = r.notas_adicionales;
+      document.getElementById('notasCard').style.display = 'block';
+    } else {
+      document.getElementById('notasCard').style.display = 'none';
+    }
+
+    document.getElementById('results').style.display = 'block';
+
+  } catch (err) {
+    const el = document.getElementById('error');
+    el.textContent = 'Error al analizar: ' + err.message;
+    el.style.display = 'block';
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+</script>
+</body>
+</html>
